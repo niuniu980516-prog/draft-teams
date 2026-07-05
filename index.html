@@ -81,18 +81,16 @@
   .scoreBoard { display:flex; gap:12px; align-items:stretch; }
   .scoreCol { flex:1; background:#242938; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; position:relative; }
   .scoreCol.serving { box-shadow:0 0 0 3px #ffd166 inset; }
-  .serveDot { width:14px; height:14px; border-radius:50%; background:#ffd166; margin-bottom:8px; visibility:hidden; }
+  .serveDot { width:16px; height:16px; border-radius:50%; background:#ffd166; margin-bottom:10px; visibility:hidden; }
   .scoreCol.serving .serveDot { visibility:visible; }
-  .teamName { font-size:14px; font-weight:bold; margin-bottom:2px; min-height:20px; word-break:break-all; opacity:0.75; }
-  .setsWon { color:#8fd3ff; font-size:14px; margin-bottom:10px; }
-  .bigScore { font-size:96px; font-weight:900; line-height:1; margin:4px 0 14px; }
-  @media (min-width:420px) { .bigScore { font-size:120px; } }
+  .bigScore { font-size:140px; font-weight:900; line-height:1; margin:4px 0 18px; }
+  @media (min-width:420px) { .bigScore { font-size:180px; } }
   .scoreBtns { display:flex; gap:8px; }
   .scoreBtns button { width:52px; height:52px; font-size:22px; margin:0; padding:0; }
   .scoreBtns .minusBtn { background:#5a2020; }
   .matchControls { display:flex; justify-content:center; gap:10px; margin-top:20px; flex-wrap:wrap; }
   .setHistory { text-align:center; color:#999; font-size:13px; margin-top:14px; }
-  .winnerBanner { text-align:center; font-size:20px; color:#ffd166; font-weight:bold; margin:16px 0; }
+  .winnerBanner { text-align:center; font-size:32px; color:#ffd166; font-weight:bold; margin:16px 0; }
 </style>
 </head>
 <body>
@@ -163,17 +161,11 @@
 
 <div id="scorePage" class="hidden">
   <div class="scoreWrap">
-    <div class="nameRow">
-      <input type="text" id="nameA" value="" placeholder="主隊" maxlength="12">
-      <input type="text" id="nameB" value="" placeholder="客隊" maxlength="12">
-    </div>
     <div class="setInfo" id="setInfo">第 1 局</div>
     <div id="winnerBanner" class="winnerBanner hidden"></div>
     <div class="scoreBoard">
       <div class="scoreCol" id="colA">
         <div class="serveDot"></div>
-        <div class="teamName" id="teamNameA">主隊</div>
-        <div class="setsWon" id="setsWonA">獲勝局數：0</div>
         <div class="bigScore" id="bigScoreA">0</div>
         <div class="scoreBtns">
           <button class="minusBtn" id="minusA">－</button>
@@ -182,8 +174,6 @@
       </div>
       <div class="scoreCol" id="colB">
         <div class="serveDot"></div>
-        <div class="teamName" id="teamNameB">客隊</div>
-        <div class="setsWon" id="setsWonB">獲勝局數：0</div>
         <div class="bigScore" id="bigScoreB">0</div>
         <div class="scoreBtns">
           <button class="minusBtn" id="minusB">－</button>
@@ -423,14 +413,8 @@ navScore.addEventListener('click', () => {
 });
 
 // ---------- 排球記分板 ----------
-const nameA = document.getElementById('nameA');
-const nameB = document.getElementById('nameB');
-const teamNameA = document.getElementById('teamNameA');
-const teamNameB = document.getElementById('teamNameB');
 const bigScoreA = document.getElementById('bigScoreA');
 const bigScoreB = document.getElementById('bigScoreB');
-const setsWonA = document.getElementById('setsWonA');
-const setsWonB = document.getElementById('setsWonB');
 const colA = document.getElementById('colA');
 const colB = document.getElementById('colB');
 const setInfo = document.getElementById('setInfo');
@@ -450,9 +434,6 @@ let history = [];
 let serving = null;
 let matchOver = false;
 
-nameA.addEventListener('input', () => teamNameA.textContent = nameA.value || '主隊');
-nameB.addEventListener('input', () => teamNameB.textContent = nameB.value || '客隊');
-
 function pointCap() {
   return (setNum === 5) ? 15 : 25;
 }
@@ -460,8 +441,6 @@ function pointCap() {
 function render() {
   bigScoreA.textContent = score.A;
   bigScoreB.textContent = score.B;
-  setsWonA.textContent = `獲勝局數：${setsWon.A}`;
-  setsWonB.textContent = `獲勝局數：${setsWon.B}`;
   setInfo.textContent = matchOver ? '比賽結束' : `第 ${setNum} 局（${pointCap()} 分制）`;
   colA.classList.toggle('serving', serving === 'A');
   colB.classList.toggle('serving', serving === 'B');
@@ -493,8 +472,7 @@ function checkSetWin() {
     serving = winner;
     if (setsWon[winner] >= 3) {
       matchOver = true;
-      const wName = winner === 'A' ? (nameA.value || '主隊') : (nameB.value || '客隊');
-      winnerBanner.textContent = `🏆 ${wName} 獲勝！`;
+      winnerBanner.textContent = winner === 'A' ? '🏆 左方獲勝！' : '🏆 右方獲勝！';
       winnerBanner.classList.remove('hidden');
     } else {
       setNum++;
