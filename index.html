@@ -327,8 +327,18 @@ function addCard() {
 }
 
 function pickRandomColor() {
-  const available = ['blue','red','white'].filter(c => remainingInRound[c] > 0);
-  return available[Math.floor(Math.random() * available.length)];
+  // 依剩餘張數加權隨機，避免張數多的顏色跟張數少的顏色被抽到的機率一樣，
+  // 導致某顏色早早抽完、另一顏色卻一直留到最後才出現。
+  const colors = ['blue','red','white'];
+  const total = colors.reduce((sum, c) => sum + Math.max(0, remainingInRound[c]), 0);
+  if (total <= 0) return null;
+  let r = Math.random() * total;
+  for (const c of colors) {
+    const w = Math.max(0, remainingInRound[c]);
+    if (r < w) return c;
+    r -= w;
+  }
+  return colors.find(c => remainingInRound[c] > 0);
 }
 
 function onCardClick(idx) {
