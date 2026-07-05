@@ -91,6 +91,9 @@
   .matchControls { display:flex; justify-content:center; gap:10px; margin-top:20px; flex-wrap:wrap; }
   .setHistory { text-align:center; color:#999; font-size:13px; margin-top:14px; }
   .winnerBanner { text-align:center; font-size:32px; color:#ffd166; font-weight:bold; margin:16px 0; }
+  .modeRow { display:flex; justify-content:center; gap:10px; margin-bottom:12px; }
+  .modeBtn { background:#2b3040; border:2px solid transparent; padding:10px 18px; font-size:15px; }
+  .modeBtn.active { background:#3a7bd5; border-color:#ffd166; }
 </style>
 </head>
 <body>
@@ -161,7 +164,11 @@
 
 <div id="scorePage" class="hidden">
   <div class="scoreWrap">
-    <div class="setInfo" id="setInfo">第 1 局</div>
+    <div class="modeRow" id="modeRow">
+      <button class="modeBtn active" id="mode25" data-cap="25">25 分制</button>
+      <button class="modeBtn" id="mode15" data-cap="15">15 分制</button>
+    </div>
+    <div class="setInfo" id="setInfo">25 分制</div>
     <div id="winnerBanner" class="winnerBanner hidden"></div>
     <div class="scoreBoard">
       <div class="scoreCol" id="colA">
@@ -182,10 +189,9 @@
       </div>
     </div>
     <div class="matchControls">
-      <button id="btnUndoSet">上一局分數重置</button>
+      <button id="btnUndoSet">分數歸零</button>
       <button id="btnResetMatch">重新開始比賽</button>
     </div>
-    <div class="setHistory" id="setHistory"></div>
   </div>
 </div>
 
@@ -418,7 +424,6 @@ const bigScoreB = document.getElementById('bigScoreB');
 const colA = document.getElementById('colA');
 const colB = document.getElementById('colB');
 const setInfo = document.getElementById('setInfo');
-const setHistory = document.getElementById('setHistory');
 const winnerBanner = document.getElementById('winnerBanner');
 const minusA = document.getElementById('minusA');
 const minusB = document.getElementById('minusB');
@@ -426,57 +431,54 @@ const plusA = document.getElementById('plusA');
 const plusB = document.getElementById('plusB');
 const btnUndoSet = document.getElementById('btnUndoSet');
 const btnResetMatch = document.getElementById('btnResetMatch');
+const mode25 = document.getElementById('mode25');
+const mode15 = document.getElementById('mode15');
 
 let score = { A:0, B:0 };
-let setsWon = { A:0, B:0 };
-let setNum = 1;
-let history = [];
+let cap = 25;
 let serving = null;
-let matchOver = false;
-
-function pointCap() {
-  return (setNum === 5) ? 15 : 25;
-}
+let gameOver = false;
 
 function render() {
   bigScoreA.textContent = score.A;
   bigScoreB.textContent = score.B;
-  setInfo.textContent = matchOver ? '比賽結束' : `第 ${setNum} 局（${pointCap()} 分制）`;
+  setInfo.textContent = gameOver ? '比賽結束' : `${cap} 分制`;
   colA.classList.toggle('serving', serving === 'A');
   colB.classList.toggle('serving', serving === 'B');
-  setHistory.textContent = history.length ? ('已完成局數：' + history.join('　')) : '';
 }
 
+function setMode(newCap) {
+  if (gameOver === false && score.A === 0 && score.B === 0) {
+    cap = newCap;
+    mode25.classList.toggle('active', cap === 25);
+    mode15.classList.toggle('active', cap === 15);
+    render();
+  }
+}
+mode25.addEventListener('click', () => setMode(25));
+mode15.addEventListener('click', () => setMode(15));
+
 function addPoint(team) {
-  if (matchOver) return;
+  if (gameOver) return;
   score[team]++;
   serving = team;
-  checkSetWin();
+  checkGameWin();
   render();
 }
 
 function minusPoint(team) {
-  if (matchOver) return;
+  if (gameOver) return;
   if (score[team] > 0) score[team]--;
   render();
 }
 
-function checkSetWin() {
-  const cap = pointCap();
+function checkGameWin() {
   const a = score.A, b = score.B;
   if ((a >= cap || b >= cap) && Math.abs(a - b) >= 2) {
     const winner = a > b ? 'A' : 'B';
-    setsWon[winner]++;
-    history.push(`第${setNum}局 ${a}:${b}`);
-    score = { A:0, B:0 };
-    serving = winner;
-    if (setsWon[winner] >= 3) {
-      matchOver = true;
-      winnerBanner.textContent = winner === 'A' ? '🏆 左方獲勝！' : '🏆 右方獲勝！';
-      winnerBanner.classList.remove('hidden');
-    } else {
-      setNum++;
-    }
+    gameOver = true;
+    winnerBanner.textContent = winner === 'A' ? '🏆 左方獲勝！' : '🏆 右方獲勝！';
+    winnerBanner.classList.remove('hidden');
   }
 }
 
@@ -487,16 +489,15 @@ minusB.addEventListener('click', () => minusPoint('B'));
 
 btnUndoSet.addEventListener('click', () => {
   score = { A:0, B:0 };
+  gameOver = false;
+  winnerBanner.classList.add('hidden');
   render();
 });
 
 btnResetMatch.addEventListener('click', () => {
   score = { A:0, B:0 };
-  setsWon = { A:0, B:0 };
-  setNum = 1;
-  history = [];
   serving = null;
-  matchOver = false;
+  gameOver = false;
   winnerBanner.classList.add('hidden');
   render();
 });
