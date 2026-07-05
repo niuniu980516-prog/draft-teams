@@ -433,12 +433,14 @@ navDraft.addEventListener('click', () => {
   navScore.classList.remove('active');
   draftPage.classList.remove('hidden');
   scorePage.classList.add('hidden');
+  fetch('https://api.countapi.xyz/hit/niuniu980516-prog-draft-teams/draft-visits').catch(()=>{});
 });
 navScore.addEventListener('click', () => {
   navScore.classList.add('active');
   navDraft.classList.remove('active');
   scorePage.classList.remove('hidden');
   draftPage.classList.add('hidden');
+  fetch('https://api.countapi.xyz/hit/niuniu980516-prog-draft-teams/score-visits').catch(()=>{});
 });
 
 // ---------- 排球記分板 ----------
@@ -527,7 +529,7 @@ btnResetMatch.addEventListener('click', () => {
 
 render();
 
-fetch('https://api.countapi.xyz/hit/niuniu980516-prog-draft-teams/visits').catch(()=>{});
+fetch('https://api.countapi.xyz/hit/niuniu980516-prog-draft-teams/draft-visits').catch(()=>{});
 </script>
 </body>
 </html>
