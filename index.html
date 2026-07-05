@@ -69,11 +69,41 @@
   @media (min-width: 480px) {
     .cards { grid-template-columns:repeat(4, 1fr); }
   }
+
+  .navBar { display:flex; gap:8px; justify-content:center; margin-bottom:16px; }
+  .navBtn { flex:1 1 auto; max-width:200px; padding:12px; font-size:15px; background:#2b3040; border:2px solid transparent; }
+  .navBtn.active { background:#3a7bd5; border-color:#ffd166; }
+
+  .scoreWrap { max-width:460px; margin:0 auto; }
+  .nameRow { display:flex; gap:10px; margin-bottom:14px; }
+  .nameRow input { flex:1; font-size:16px; padding:10px; border-radius:8px; border:1px solid #555; background:#242938; color:#eee; text-align:center; }
+  .setInfo { color:#ffd166; font-size:15px; margin-bottom:10px; }
+  .scoreBoard { display:flex; gap:12px; align-items:stretch; }
+  .scoreCol { flex:1; background:#242938; border-radius:14px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; position:relative; }
+  .scoreCol.serving { box-shadow:0 0 0 3px #ffd166 inset; }
+  .serveDot { width:14px; height:14px; border-radius:50%; background:#ffd166; margin-bottom:8px; visibility:hidden; }
+  .scoreCol.serving .serveDot { visibility:visible; }
+  .teamName { font-size:16px; font-weight:bold; margin-bottom:6px; min-height:22px; word-break:break-all; }
+  .setsWon { color:#8fd3ff; font-size:14px; margin-bottom:10px; }
+  .bigScore { font-size:56px; font-weight:bold; margin:6px 0 14px; }
+  .scoreBtns { display:flex; gap:8px; }
+  .scoreBtns button { width:52px; height:52px; font-size:22px; margin:0; padding:0; }
+  .scoreBtns .minusBtn { background:#5a2020; }
+  .matchControls { display:flex; justify-content:center; gap:10px; margin-top:20px; flex-wrap:wrap; }
+  .setHistory { text-align:center; color:#999; font-size:13px; margin-top:14px; }
+  .winnerBanner { text-align:center; font-size:20px; color:#ffd166; font-weight:bold; margin:16px 0; }
 </style>
 </head>
 <body>
 
-<h1>翻牌抽籤分隊</h1>
+<h1>翻牌抽籤 / 排球記分板</h1>
+
+<div class="navBar">
+  <button class="navBtn active" id="navDraft">🎴 抽籤分隊</button>
+  <button class="navBtn" id="navScore">🏐 排球記分板</button>
+</div>
+
+<div id="draftPage">
 
 <div class="setupBox" id="setupBox">
   <h3>第一次抽籤設定（每色最多 6 名）</h3>
@@ -125,6 +155,46 @@
     <div class="team blue"><h3>藍隊 (0/6)</h3><ul id="listBlue"></ul></div>
     <div class="team red"><h3>紅隊 (0/6)</h3><ul id="listRed"></ul></div>
     <div class="team white"><h3>白隊 (0/6)</h3><ul id="listWhite"></ul></div>
+  </div>
+</div>
+
+</div>
+
+<div id="scorePage" class="hidden">
+  <div class="scoreWrap">
+    <div class="nameRow">
+      <input type="text" id="nameA" value="A隊" maxlength="12">
+      <input type="text" id="nameB" value="B隊" maxlength="12">
+    </div>
+    <div class="setInfo" id="setInfo">第 1 局</div>
+    <div id="winnerBanner" class="winnerBanner hidden"></div>
+    <div class="scoreBoard">
+      <div class="scoreCol" id="colA">
+        <div class="serveDot"></div>
+        <div class="teamName" id="teamNameA">A隊</div>
+        <div class="setsWon" id="setsWonA">獲勝局數：0</div>
+        <div class="bigScore" id="bigScoreA">0</div>
+        <div class="scoreBtns">
+          <button class="minusBtn" id="minusA">－</button>
+          <button id="plusA">＋</button>
+        </div>
+      </div>
+      <div class="scoreCol" id="colB">
+        <div class="serveDot"></div>
+        <div class="teamName" id="teamNameB">B隊</div>
+        <div class="setsWon" id="setsWonB">獲勝局數：0</div>
+        <div class="bigScore" id="bigScoreB">0</div>
+        <div class="scoreBtns">
+          <button class="minusBtn" id="minusB">－</button>
+          <button id="plusB">＋</button>
+        </div>
+      </div>
+    </div>
+    <div class="matchControls">
+      <button id="btnUndoSet">上一局分數重置</button>
+      <button id="btnResetMatch">重新開始比賽</button>
+    </div>
+    <div class="setHistory" id="setHistory"></div>
   </div>
 </div>
 
@@ -331,6 +401,128 @@ btnReset.addEventListener('click', () => {
   gameArea.classList.add('hidden');
   setupBox.classList.remove('hidden');
 });
+
+// ---------- 頁面切換 ----------
+const navDraft = document.getElementById('navDraft');
+const navScore = document.getElementById('navScore');
+const draftPage = document.getElementById('draftPage');
+const scorePage = document.getElementById('scorePage');
+
+navDraft.addEventListener('click', () => {
+  navDraft.classList.add('active');
+  navScore.classList.remove('active');
+  draftPage.classList.remove('hidden');
+  scorePage.classList.add('hidden');
+});
+navScore.addEventListener('click', () => {
+  navScore.classList.add('active');
+  navDraft.classList.remove('active');
+  scorePage.classList.remove('hidden');
+  draftPage.classList.add('hidden');
+});
+
+// ---------- 排球記分板 ----------
+const nameA = document.getElementById('nameA');
+const nameB = document.getElementById('nameB');
+const teamNameA = document.getElementById('teamNameA');
+const teamNameB = document.getElementById('teamNameB');
+const bigScoreA = document.getElementById('bigScoreA');
+const bigScoreB = document.getElementById('bigScoreB');
+const setsWonA = document.getElementById('setsWonA');
+const setsWonB = document.getElementById('setsWonB');
+const colA = document.getElementById('colA');
+const colB = document.getElementById('colB');
+const setInfo = document.getElementById('setInfo');
+const setHistory = document.getElementById('setHistory');
+const winnerBanner = document.getElementById('winnerBanner');
+const minusA = document.getElementById('minusA');
+const minusB = document.getElementById('minusB');
+const plusA = document.getElementById('plusA');
+const plusB = document.getElementById('plusB');
+const btnUndoSet = document.getElementById('btnUndoSet');
+const btnResetMatch = document.getElementById('btnResetMatch');
+
+let score = { A:0, B:0 };
+let setsWon = { A:0, B:0 };
+let setNum = 1;
+let history = [];
+let serving = null;
+let matchOver = false;
+
+nameA.addEventListener('input', () => teamNameA.textContent = nameA.value || 'A隊');
+nameB.addEventListener('input', () => teamNameB.textContent = nameB.value || 'B隊');
+
+function pointCap() {
+  return (setNum === 5) ? 15 : 25;
+}
+
+function render() {
+  bigScoreA.textContent = score.A;
+  bigScoreB.textContent = score.B;
+  setsWonA.textContent = `獲勝局數：${setsWon.A}`;
+  setsWonB.textContent = `獲勝局數：${setsWon.B}`;
+  setInfo.textContent = matchOver ? '比賽結束' : `第 ${setNum} 局（${pointCap()} 分制）`;
+  colA.classList.toggle('serving', serving === 'A');
+  colB.classList.toggle('serving', serving === 'B');
+  setHistory.textContent = history.length ? ('已完成局數：' + history.join('　')) : '';
+}
+
+function addPoint(team) {
+  if (matchOver) return;
+  score[team]++;
+  serving = team;
+  checkSetWin();
+  render();
+}
+
+function minusPoint(team) {
+  if (matchOver) return;
+  if (score[team] > 0) score[team]--;
+  render();
+}
+
+function checkSetWin() {
+  const cap = pointCap();
+  const a = score.A, b = score.B;
+  if ((a >= cap || b >= cap) && Math.abs(a - b) >= 2) {
+    const winner = a > b ? 'A' : 'B';
+    setsWon[winner]++;
+    history.push(`第${setNum}局 ${a}:${b}`);
+    score = { A:0, B:0 };
+    serving = winner;
+    if (setsWon[winner] >= 3) {
+      matchOver = true;
+      const wName = winner === 'A' ? (nameA.value || 'A隊') : (nameB.value || 'B隊');
+      winnerBanner.textContent = `🏆 ${wName} 獲勝！`;
+      winnerBanner.classList.remove('hidden');
+    } else {
+      setNum++;
+    }
+  }
+}
+
+plusA.addEventListener('click', () => addPoint('A'));
+plusB.addEventListener('click', () => addPoint('B'));
+minusA.addEventListener('click', () => minusPoint('A'));
+minusB.addEventListener('click', () => minusPoint('B'));
+
+btnUndoSet.addEventListener('click', () => {
+  score = { A:0, B:0 };
+  render();
+});
+
+btnResetMatch.addEventListener('click', () => {
+  score = { A:0, B:0 };
+  setsWon = { A:0, B:0 };
+  setNum = 1;
+  history = [];
+  serving = null;
+  matchOver = false;
+  winnerBanner.classList.add('hidden');
+  render();
+});
+
+render();
 </script>
 </body>
 </html>
