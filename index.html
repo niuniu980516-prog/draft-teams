@@ -5,25 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>翻牌抽籤分隊</title>
 <style>
-  body { font-family: "Microsoft JhengHei", sans-serif; background:#1b1f2a; color:#eee; text-align:center; padding:30px; }
-  h1 { margin-bottom:10px; }
-  .info { color:#ccc; margin-bottom:16px; font-size:16px; min-height:24px; }
-  button { padding:14px 24px; margin:6px; font-size:18px; border:none; border-radius:8px; cursor:pointer; background:#3a7bd5; color:#fff; touch-action:manipulation; }
+  * { box-sizing:border-box; }
+  body { font-family: "Microsoft JhengHei", sans-serif; background:#1b1f2a; color:#eee; text-align:center; padding:16px; max-width:520px; margin:0 auto; }
+  h1 { margin-bottom:10px; font-size:22px; }
+  .info { color:#ccc; margin-bottom:16px; font-size:15px; min-height:40px; line-height:1.4; }
+  button { padding:14px 20px; margin:6px; font-size:17px; border:none; border-radius:8px; cursor:pointer; background:#3a7bd5; color:#fff; touch-action:manipulation; }
   button:disabled { background:#444; color:#888; cursor:not-allowed; }
 
-  .setupBox { background:#242938; border-radius:12px; padding:20px; max-width:420px; margin:0 auto 20px; }
-  .setupBox h3 { margin-top:0; }
-  .setupRow { display:flex; justify-content:space-between; align-items:center; margin:10px 0; font-size:16px; }
-  .setupRow input { width:60px; font-size:16px; padding:4px; border-radius:6px; border:1px solid #555; background:#1b1f2a; color:#eee; text-align:center; }
+  .setupBox { background:#242938; border-radius:12px; padding:16px; max-width:420px; margin:0 auto 20px; }
+  .setupBox h3 { margin-top:0; font-size:16px; }
+  .setupRow { display:flex; justify-content:space-between; align-items:center; margin:14px 0; font-size:17px; }
+  .setupRow .stepper { display:flex; align-items:center; gap:8px; }
+  .setupRow .stepBtn {
+    width:44px; height:44px; font-size:22px; font-weight:bold; border-radius:8px; border:none;
+    background:#3a4257; color:#fff; cursor:pointer; touch-action:manipulation; margin:0; padding:0;
+    display:flex; align-items:center; justify-content:center; line-height:1;
+  }
+  .setupRow .stepBtn:active { background:#4c5670; }
+  .setupRow .stepBtn:disabled { background:#2b3040; color:#666; cursor:not-allowed; }
+  .setupRow input { width:48px; font-size:18px; padding:8px 2px; border-radius:6px; border:1px solid #555; background:#1b1f2a; color:#eee; text-align:center; -moz-appearance:textfield; }
+  .setupRow input::-webkit-outer-spin-button, .setupRow input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
   .setupRow.blue label { color:#5a91ff; }
   .setupRow.red label { color:#ff6f6a; }
   .setupRow.white label { color:#eee; }
   .setupHint { color:#999; font-size:13px; margin-top:8px; }
+  .setupTotal { color:#ffd166; font-size:14px; margin-top:10px; }
 
-  .pickBar { display:flex; justify-content:center; gap:16px; margin:16px 0 24px; flex-wrap:wrap; }
+  .pickBar { display:flex; justify-content:center; gap:10px; margin:14px 0 20px; flex-wrap:wrap; }
   .pickBtn {
-    padding:14px 26px; font-size:18px; font-weight:bold; border-radius:10px; border:3px solid transparent;
-    cursor:pointer; color:#fff; min-width:120px;
+    padding:12px 18px; font-size:16px; font-weight:bold; border-radius:10px; border:3px solid transparent;
+    cursor:pointer; color:#fff; flex:1 1 90px; min-width:90px; max-width:140px;
   }
   .pickBtn.blue { background:#2b6cff; }
   .pickBtn.red { background:#e0433f; }
@@ -31,29 +42,33 @@
   .pickBtn.selected { border-color:#ffd166; box-shadow:0 0 12px #ffd166; transform:scale(1.06); }
   .pickBtn:disabled { background:#555 !important; color:#999 !important; opacity:0.5; box-shadow:none; }
 
-  .cards { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; margin-top:10px; }
+  .cards { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:10px; max-width:420px; margin-left:auto; margin-right:auto; }
   .card {
-    width:100px; height:130px; border-radius:10px; cursor:pointer;
+    width:100%; aspect-ratio:3/4; border-radius:10px; cursor:pointer;
     display:flex; align-items:center; justify-content:center;
-    font-size:24px; font-weight:bold; user-select:none;
+    font-size:22px; font-weight:bold; user-select:none;
     background:#2b3040; border:2px solid #444; transition: transform 0.15s;
   }
-  .card:hover:not(.disabled) { transform: scale(1.08); border-color:#ffd166; }
+  .card:hover:not(.disabled) { transform: scale(1.05); border-color:#ffd166; }
   .card.disabled { cursor:not-allowed; opacity:0.35; }
   .card.flipped.blue { background:#2b6cff; border-color:#5a91ff; }
   .card.flipped.red { background:#e0433f; border-color:#ff6f6a; }
   .card.flipped.white { background:#eeeeee; color:#222; border-color:#fff; }
 
-  .teams { display:flex; justify-content:center; gap:40px; margin-top:30px; flex-wrap:wrap; }
-  .team { min-width:150px; }
-  .team h3 { margin-bottom:6px; }
+  .teams { display:flex; justify-content:center; gap:16px; margin-top:26px; flex-wrap:wrap; }
+  .team { min-width:100px; flex:1 1 100px; }
+  .team h3 { margin-bottom:6px; font-size:15px; }
   .team.blue h3 { color:#5a91ff; }
   .team.red h3 { color:#ff6f6a; }
   .team.white h3 { color:#eee; }
-  .team ul { list-style:none; padding:0; }
+  .team ul { list-style:none; padding:0; font-size:13px; }
   .team li { padding:3px 0; }
 
   .hidden { display:none; }
+
+  @media (min-width: 480px) {
+    .cards { grid-template-columns:repeat(4, 1fr); }
+  }
 </style>
 </head>
 <body>
@@ -62,10 +77,32 @@
 
 <div class="setupBox" id="setupBox">
   <h3>第一次抽籤設定（每色最多 6 名）</h3>
-  <div class="setupRow blue"><label>藍隊</label><input type="number" id="setBlue" min="0" max="6" value="2"></div>
-  <div class="setupRow red"><label>紅隊</label><input type="number" id="setRed" min="0" max="6" value="2"></div>
-  <div class="setupRow white"><label>白隊</label><input type="number" id="setWhite" min="0" max="6" value="2"></div>
+  <div class="setupRow blue">
+    <label>藍隊</label>
+    <div class="stepper">
+      <button type="button" class="stepBtn" data-color="blue" data-delta="-1">－</button>
+      <input type="number" id="setBlue" min="0" max="6" value="2" readonly>
+      <button type="button" class="stepBtn" data-color="blue" data-delta="1">＋</button>
+    </div>
+  </div>
+  <div class="setupRow red">
+    <label>紅隊</label>
+    <div class="stepper">
+      <button type="button" class="stepBtn" data-color="red" data-delta="-1">－</button>
+      <input type="number" id="setRed" min="0" max="6" value="2" readonly>
+      <button type="button" class="stepBtn" data-color="red" data-delta="1">＋</button>
+    </div>
+  </div>
+  <div class="setupRow white">
+    <label>白隊</label>
+    <div class="stepper">
+      <button type="button" class="stepBtn" data-color="white" data-delta="-1">－</button>
+      <input type="number" id="setWhite" min="0" max="6" value="2" readonly>
+      <button type="button" class="stepBtn" data-color="white" data-delta="1">＋</button>
+    </div>
+  </div>
   <div class="setupHint">第二次會自動補齊每隊到 6 名，只顯示剩餘要抽的牌</div>
+  <div class="setupTotal" id="setupTotal"></div>
   <button id="btnStart">開始抽籤</button>
 </div>
 
@@ -102,6 +139,34 @@ const cardArea = document.getElementById('cardArea');
 const setBlue = document.getElementById('setBlue');
 const setRed = document.getElementById('setRed');
 const setWhite = document.getElementById('setWhite');
+const setupTotal = document.getElementById('setupTotal');
+const setInputs = { blue:setBlue, red:setRed, white:setWhite };
+
+function updateSetupTotal() {
+  const b = parseInt(setBlue.value) || 0;
+  const r = parseInt(setRed.value) || 0;
+  const w = parseInt(setWhite.value) || 0;
+  setupTotal.textContent = `第一次共抽 ${b + r + w} 張牌`;
+  document.querySelectorAll('.stepBtn').forEach(btn => {
+    const color = btn.dataset.color;
+    const delta = parseInt(btn.dataset.delta);
+    const val = parseInt(setInputs[color].value) || 0;
+    if (delta > 0) btn.disabled = val >= 6;
+    else btn.disabled = val <= 0;
+  });
+}
+
+document.querySelectorAll('.stepBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const color = btn.dataset.color;
+    const delta = parseInt(btn.dataset.delta);
+    const input = setInputs[color];
+    const val = Math.max(0, Math.min(6, (parseInt(input.value) || 0) + delta));
+    input.value = val;
+    updateSetupTotal();
+  });
+});
+updateSetupTotal();
 
 const pickBtns = {
   blue: document.getElementById('pickBlue'),
