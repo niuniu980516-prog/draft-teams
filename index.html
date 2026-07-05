@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>翻牌抽籤分隊</title>
+<style>
+  body { font-family: "Microsoft JhengHei", sans-serif; background:#1b1f2a; color:#eee; text-align:center; padding:30px; }
+  h1 { margin-bottom:10px; }
+  .info { color:#ccc; margin-bottom:16px; font-size:16px; min-height:24px; }
+  button { padding:14px 24px; margin:6px; font-size:18px; border:none; border-radius:8px; cursor:pointer; background:#3a7bd5; color:#fff; touch-action:manipulation; }
+  button:disabled { background:#444; color:#888; cursor:not-allowed; }
+
+  .setupBox { background:#242938; border-radius:12px; padding:20px; max-width:420px; margin:0 auto 20px; }
+  .setupBox h3 { margin-top:0; }
+  .setupRow { display:flex; justify-content:space-between; align-items:center; margin:10px 0; font-size:16px; }
+  .setupRow input { width:60px; font-size:16px; padding:4px; border-radius:6px; border:1px solid #555; background:#1b1f2a; color:#eee; text-align:center; }
+  .setupRow.blue label { color:#5a91ff; }
+  .setupRow.red label { color:#ff6f6a; }
+  .setupRow.white label { color:#eee; }
+  .setupHint { color:#999; font-size:13px; margin-top:8px; }
+
+  .pickBar { display:flex; justify-content:center; gap:16px; margin:16px 0 24px; flex-wrap:wrap; }
+  .pickBtn {
+    padding:14px 26px; font-size:18px; font-weight:bold; border-radius:10px; border:3px solid transparent;
+    cursor:pointer; color:#fff; min-width:120px;
+  }
+  .pickBtn.blue { background:#2b6cff; }
+  .pickBtn.red { background:#e0433f; }
+  .pickBtn.white { background:#eee; color:#222; }
+  .pickBtn.selected { border-color:#ffd166; box-shadow:0 0 12px #ffd166; transform:scale(1.06); }
+  .pickBtn:disabled { background:#555 !important; color:#999 !important; opacity:0.5; box-shadow:none; }
+
+  .cards { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; margin-top:10px; }
+  .card {
+    width:100px; height:130px; border-radius:10px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:24px; font-weight:bold; user-select:none;
+    background:#2b3040; border:2px solid #444; transition: transform 0.15s;
+  }
+  .card:hover:not(.disabled) { transform: scale(1.08); border-color:#ffd166; }
+  .card.disabled { cursor:not-allowed; opacity:0.35; }
+  .card.flipped.blue { background:#2b6cff; border-color:#5a91ff; }
+  .card.flipped.red { background:#e0433f; border-color:#ff6f6a; }
+  .card.flipped.white { background:#eeeeee; color:#222; border-color:#fff; }
+
+  .teams { display:flex; justify-content:center; gap:40px; margin-top:30px; flex-wrap:wrap; }
+  .team { min-width:150px; }
+  .team h3 { margin-bottom:6px; }
+  .team.blue h3 { color:#5a91ff; }
+  .team.red h3 { color:#ff6f6a; }
+  .team.white h3 { color:#eee; }
+  .team ul { list-style:none; padding:0; }
+  .team li { padding:3px 0; }
+
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+
+<h1>翻牌抽籤分隊</h1>
+
+<div class="setupBox" id="setupBox">
+  <h3>第一次抽籤設定（每色最多 6 名）</h3>
+  <div class="setupRow blue"><label>藍隊</label><input type="number" id="setBlue" min="0" max="6" value="2"></div>
+  <div class="setupRow red"><label>紅隊</label><input type="number" id="setRed" min="0" max="6" value="2"></div>
+  <div class="setupRow white"><label>白隊</label><input type="number" id="setWhite" min="0" max="6" value="2"></div>
+  <div class="setupHint">第二次會自動補齊每隊到 6 名，只顯示剩餘要抽的牌</div>
+  <button id="btnStart">開始抽籤</button>
+</div>
+
+<div id="gameArea" class="hidden">
+  <div class="info" id="statusText"></div>
+
+  <div class="pickBar" id="pickBar">
+    <button class="pickBtn blue" data-color="blue" id="pickBlue">藍</button>
+    <button class="pickBtn red" data-color="red" id="pickRed">紅</button>
+    <button class="pickBtn white" data-color="white" id="pickWhite">白</button>
+  </div>
+
+  <div class="cards" id="cardArea"></div>
+
+  <div>
+    <button id="btnReset">重新開始</button>
+  </div>
+
+  <div class="teams">
+    <div class="team blue"><h3>藍隊 (0/6)</h3><ul id="listBlue"></ul></div>
+    <div class="team red"><h3>紅隊 (0/6)</h3><ul id="listRed"></ul></div>
+    <div class="team white"><h3>白隊 (0/6)</h3><ul id="listWhite"></ul></div>
+  </div>
+</div>
+
+<script>
+const setupBox = document.getElementById('setupBox');
+const gameArea = document.getElementById('gameArea');
+const btnStart = document.getElementById('btnStart');
+const btnReset = document.getElementById('btnReset');
+const statusText = document.getElementById('statusText');
+const cardArea = document.getElementById('cardArea');
+
+const setBlue = document.getElementById('setBlue');
+const setRed = document.getElementById('setRed');
+const setWhite = document.getElementById('setWhite');
+
+const pickBtns = {
+  blue: document.getElementById('pickBlue'),
+  red: document.getElementById('pickRed'),
+  white: document.getElementById('pickWhite'),
+};
+
+const listBlue = document.getElementById('listBlue');
+const listRed = document.getElementById('listRed');
+const listWhite = document.getElementById('listWhite');
+const teamLists = { blue:listBlue, red:listRed, white:listWhite };
+const teamHeaders = {
+  blue: document.querySelector('.team.blue h3'),
+  red: document.querySelector('.team.red h3'),
+  white: document.querySelector('.team.white h3'),
+};
+
+const teamCounts = { blue:0, red:0, white:0 };
+let cards = []; // {el, flipped, color}
+let cardCounter = 0;
+let round = 0; // 1 or 2
+let remainingInRound = { blue:0, red:0, white:0 };
+let selectedColor = null;
+
+function updateTeamHeaders() {
+  teamHeaders.blue.textContent = `藍隊 (${teamCounts.blue}/6)`;
+  teamHeaders.red.textContent = `紅隊 (${teamCounts.red}/6)`;
+  teamHeaders.white.textContent = `白隊 (${teamCounts.white}/6)`;
+}
+
+function updatePickBar() {
+  ['blue','red','white'].forEach(color => {
+    const left = remainingInRound[color];
+    const label = color === 'blue' ? '藍' : color === 'red' ? '紅' : '白';
+    pickBtns[color].textContent = `${label} (剩 ${left})`;
+    pickBtns[color].disabled = left <= 0;
+    pickBtns[color].classList.toggle('selected', selectedColor === color);
+  });
+  if (selectedColor && remainingInRound[selectedColor] <= 0) {
+    selectedColor = null;
+  }
+}
+
+function selectColor(color) {
+  if (remainingInRound[color] <= 0) return;
+  selectedColor = selectedColor === color ? null : color;
+  updatePickBar();
+  if (selectedColor) {
+    const label = selectedColor === 'blue' ? '藍' : selectedColor === 'red' ? '紅' : '白';
+    statusText.textContent = `已選擇「${label}」，請點一張牌翻開`;
+  } else {
+    statusText.textContent = '請先選擇要抽出的顏色';
+  }
+}
+
+Object.keys(pickBtns).forEach(color => {
+  pickBtns[color].addEventListener('click', () => selectColor(color));
+});
+
+function makeCards(count) {
+  cardArea.innerHTML = '';
+  cards = [];
+  cardCounter = 0;
+  for (let i = 0; i < count; i++) {
+    addCard();
+  }
+}
+
+function addCard() {
+  cardCounter++;
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.textContent = cardCounter;
+  const idx = cards.length;
+  el.addEventListener('click', () => onCardClick(idx));
+  cardArea.appendChild(el);
+  cards.push({ el, flipped: false, color: null });
+}
+
+function pickRandomColor() {
+  const available = ['blue','red','white'].filter(c => remainingInRound[c] > 0);
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+function onCardClick(idx) {
+  const c = cards[idx];
+  if (c.flipped) return;
+  const color = selectedColor || pickRandomColor();
+  c.flipped = true;
+  c.color = color;
+  c.el.classList.add('flipped', color, 'disabled');
+  c.el.textContent = color === 'blue' ? '藍' : color === 'red' ? '紅' : '白';
+
+  remainingInRound[color]--;
+  teamCounts[color]++;
+  updateTeamHeaders();
+
+  const li = document.createElement('li');
+  li.textContent = `第 ${idx + 1} 張牌`;
+  teamLists[color].appendChild(li);
+
+  selectedColor = null;
+  updatePickBar();
+
+  const roundDone = remainingInRound.blue <= 0 && remainingInRound.red <= 0 && remainingInRound.white <= 0;
+  if (roundDone) {
+    if (round === 1) {
+      startRound2();
+    } else {
+      statusText.textContent = '全部抽籤完成！三隊各 6 人';
+    }
+  } else {
+    statusText.textContent = '請選擇顏色，或直接翻牌隨機抽色';
+  }
+}
+
+function startRound1() {
+  const b = Math.max(0, Math.min(6, parseInt(setBlue.value) || 0));
+  const r = Math.max(0, Math.min(6, parseInt(setRed.value) || 0));
+  const w = Math.max(0, Math.min(6, parseInt(setWhite.value) || 0));
+  remainingInRound = { blue:b, red:r, white:w };
+  teamCounts.blue = teamCounts.red = teamCounts.white = 0;
+  listBlue.innerHTML = listRed.innerHTML = listWhite.innerHTML = '';
+  updateTeamHeaders();
+  round = 1;
+  const total = b + r + w;
+  makeCards(total);
+  selectedColor = null;
+  updatePickBar();
+  if (total === 0) {
+    statusText.textContent = '第一次抽籤數量都是 0，直接進入第二次抽籤';
+    startRound2();
+  } else {
+    statusText.textContent = `第一次抽籤：可選顏色指定翻牌，或直接翻牌隨機抽色，共 ${total} 張`;
+  }
+}
+
+function startRound2() {
+  round = 2;
+  const b = 6 - teamCounts.blue;
+  const r = 6 - teamCounts.red;
+  const w = 6 - teamCounts.white;
+  remainingInRound = { blue:b, red:r, white:w };
+  const total = b + r + w;
+  makeCards(total);
+  selectedColor = null;
+  updatePickBar();
+  if (total === 0) {
+    statusText.textContent = '全部抽籤完成！三隊各 6 人';
+  } else {
+    statusText.textContent = `第二次抽籤：只剩 ${total} 張牌要抽，可指定顏色或直接翻牌隨機抽色`;
+  }
+}
+
+btnStart.addEventListener('click', () => {
+  setupBox.classList.add('hidden');
+  gameArea.classList.remove('hidden');
+  startRound1();
+});
+
+btnReset.addEventListener('click', () => {
+  gameArea.classList.add('hidden');
+  setupBox.classList.remove('hidden');
+});
+</script>
+</body>
+</html>
