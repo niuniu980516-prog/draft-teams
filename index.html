@@ -50,7 +50,8 @@
     background:#dde2ea; border:2px solid #9aa4b5; transition: transform 0.15s;
   }
   .card:hover:not(.disabled) { transform: scale(1.05); border-color:#c98a12; }
-  .card.disabled { cursor:not-allowed; opacity:0.35; }
+  .card.disabled:not(.flipped) { cursor:not-allowed; opacity:0.35; }
+  .card.flipped { cursor:not-allowed; }
   .card.flipped.blue { background:#2b6cff; border:3px solid #1c4fc4; color:#fff; }
   .card.flipped.red { background:#e0433f; border:3px solid #b8302c; color:#fff; }
   .card.flipped.white { background:#ffffff; color:#2a2f3a; border-color:#9aa4b5; }
