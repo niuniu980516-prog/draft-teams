@@ -163,6 +163,7 @@
   <div class="cards" id="cardArea"></div>
 
   <div>
+    <button id="btnNextRound" class="hidden">下一輪抽籤</button>
     <button id="btnReset">重新開始</button>
   </div>
 
@@ -213,6 +214,7 @@ const setupBox = document.getElementById('setupBox');
 const gameArea = document.getElementById('gameArea');
 const btnStart = document.getElementById('btnStart');
 const btnReset = document.getElementById('btnReset');
+const btnNextRound = document.getElementById('btnNextRound');
 const statusText = document.getElementById('statusText');
 const cardArea = document.getElementById('cardArea');
 
@@ -319,7 +321,7 @@ function addCard() {
   cardCounter++;
   const el = document.createElement('div');
   el.className = 'card';
-  el.textContent = cardCounter;
+  el.innerHTML = `抽<br>${cardCounter}`;
   const idx = cards.length;
   el.addEventListener('click', () => onCardClick(idx));
   cardArea.appendChild(el);
@@ -361,17 +363,24 @@ function onCardClick(idx) {
   selectedColor = null;
   updatePickBar();
 
+  const label = color === 'blue' ? '藍' : color === 'red' ? '紅' : '白';
   const roundDone = remainingInRound.blue <= 0 && remainingInRound.red <= 0 && remainingInRound.white <= 0;
   if (roundDone) {
     if (round === 1) {
-      startRound2();
+      statusText.textContent = `這輪最後一張是「${label}」！確認後按「下一輪抽籤」繼續`;
+      btnNextRound.classList.remove('hidden');
     } else {
-      statusText.textContent = '全部抽籤完成！三隊各 6 人';
+      statusText.textContent = `這輪最後一張是「${label}」！全部抽籤完成，三隊各 6 人`;
     }
   } else {
     statusText.textContent = '請選擇顏色，或直接翻牌隨機抽色';
   }
 }
+
+btnNextRound.addEventListener('click', () => {
+  btnNextRound.classList.add('hidden');
+  startRound2();
+});
 
 function startRound1() {
   const b = Math.max(0, Math.min(6, parseInt(setBlue.value) || 0));
@@ -420,6 +429,7 @@ btnStart.addEventListener('click', () => {
 btnReset.addEventListener('click', () => {
   gameArea.classList.add('hidden');
   setupBox.classList.remove('hidden');
+  btnNextRound.classList.add('hidden');
 });
 
 // ---------- 頁面切換 ----------
