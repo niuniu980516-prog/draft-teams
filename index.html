@@ -122,7 +122,7 @@
 <div id="draftPage">
 
 <div class="setupBox" id="setupBox">
-  <h3>第一次抽籤設定（每色最多 6 名）</h3>
+  <h3>男生抽籤設定（每色最多 6 名）</h3>
   <div class="setupRow blue">
     <label>藍</label>
     <div class="stepper">
@@ -147,12 +147,17 @@
       <button type="button" class="stepBtn" data-color="white" data-delta="1">＋</button>
     </div>
   </div>
-  <div class="setupHint">第二次會自動補齊每隊到 6 名，只顯示剩餘要抽的牌</div>
+  <div class="setupHint">女生人數會自動等於「6 減男生人數」，男女合計每色 6 名，共 18 張牌。</div>
   <div class="setupTotal" id="setupTotal"></div>
-  <button id="btnStart">開始抽籤</button>
+  <button id="btnStart">開始抽籤（男女兩批）</button>
 </div>
 
 <div id="gameArea" class="hidden">
+  <div class="modeRow" id="genderRow">
+    <button class="modeBtn active" id="tabMale" data-gender="male">男</button>
+    <button class="modeBtn" id="tabFemale" data-gender="female">女</button>
+  </div>
+
   <div class="info" id="statusText"></div>
 
   <div class="pickBar" id="pickBar">
@@ -164,7 +169,6 @@
   <div class="cards" id="cardArea"></div>
 
   <div>
-    <button id="btnNextRound" class="hidden">下一輪抽籤</button>
     <button id="btnReset">重新開始</button>
   </div>
 
@@ -215,7 +219,6 @@ const setupBox = document.getElementById('setupBox');
 const gameArea = document.getElementById('gameArea');
 const btnStart = document.getElementById('btnStart');
 const btnReset = document.getElementById('btnReset');
-const btnNextRound = document.getElementById('btnNextRound');
 const statusText = document.getElementById('statusText');
 const cardArea = document.getElementById('cardArea');
 
@@ -224,12 +227,18 @@ const setRed = document.getElementById('setRed');
 const setWhite = document.getElementById('setWhite');
 const setupTotal = document.getElementById('setupTotal');
 const setInputs = { blue:setBlue, red:setRed, white:setWhite };
+const genderLabel = { male:'男', female:'女' };
+
+// 男生的設定值；女生 = 6 - 男生（每色合計固定 6 張，男女共 18 張）
+const setupValues = { blue:6, red:6, white:6 };
 
 function updateSetupTotal() {
   const b = parseInt(setBlue.value) || 0;
   const r = parseInt(setRed.value) || 0;
   const w = parseInt(setWhite.value) || 0;
-  setupTotal.textContent = `第一次共抽 ${b + r + w} 張牌`;
+  setupValues.blue = b; setupValues.red = r; setupValues.white = w;
+  const femaleTotal = (6 - b) + (6 - r) + (6 - w);
+  setupTotal.textContent = `男生共抽 ${b + r + w} 張，女生自動補抽 ${femaleTotal} 張（藍${6-b}／紅${6-r}／白${6-w}）`;
   document.querySelectorAll('.stepBtn').forEach(btn => {
     const color = btn.dataset.color;
     const delta = parseInt(btn.dataset.delta);
@@ -249,6 +258,7 @@ document.querySelectorAll('.stepBtn').forEach(btn => {
     updateSetupTotal();
   });
 });
+
 updateSetupTotal();
 
 const pickBtns = {
@@ -267,41 +277,54 @@ const teamHeaders = {
   white: document.querySelector('.team.white h3'),
 };
 
-const teamCounts = { blue:0, red:0, white:0 };
-let cards = []; // {el, flipped, color}
-let cardCounter = 0;
-let round = 0; // 1 or 2
-let remainingInRound = { blue:0, red:0, white:0 };
-let selectedColor = null;
+// 男生、女生各自獨立的抽籤進度，可隨時切換分頁互不影響
+function newPool() {
+  return {
+    teamCounts: { blue:0, red:0, white:0 },
+    cards: [], // {el, flipped, color}
+    cardCounter: 0,
+    round: 0, // 1 or 2
+    remainingInRound: { blue:0, red:0, white:0 },
+    selectedColor: null,
+    started: false,
+  };
+}
+const pools = { male: newPool(), female: newPool() };
+let activeGender = 'male';
+function pool() { return pools[activeGender]; }
 
 function updateTeamHeaders() {
-  teamHeaders.blue.textContent = `藍 (${teamCounts.blue}/6)`;
-  teamHeaders.red.textContent = `紅 (${teamCounts.red}/6)`;
-  teamHeaders.white.textContent = `白 (${teamCounts.white}/6)`;
+  ['blue','red','white'].forEach(color => {
+    const total = pools.male.teamCounts[color] + pools.female.teamCounts[color];
+    const label = color === 'blue' ? '藍' : color === 'red' ? '紅' : '白';
+    teamHeaders[color].textContent = `${label} (${total}/6)`;
+  });
 }
 
 function updatePickBar() {
+  const p = pool();
   ['blue','red','white'].forEach(color => {
-    const left = remainingInRound[color];
+    const left = p.remainingInRound[color];
     const label = color === 'blue' ? '藍' : color === 'red' ? '紅' : '白';
     pickBtns[color].textContent = `${label} (剩 ${left})`;
     pickBtns[color].disabled = left <= 0;
-    pickBtns[color].classList.toggle('selected', selectedColor === color);
+    pickBtns[color].classList.toggle('selected', p.selectedColor === color);
   });
-  if (selectedColor && remainingInRound[selectedColor] <= 0) {
-    selectedColor = null;
+  if (p.selectedColor && p.remainingInRound[p.selectedColor] <= 0) {
+    p.selectedColor = null;
   }
 }
 
 function selectColor(color) {
-  if (remainingInRound[color] <= 0) return;
-  selectedColor = selectedColor === color ? null : color;
+  const p = pool();
+  if (p.remainingInRound[color] <= 0) return;
+  p.selectedColor = p.selectedColor === color ? null : color;
   updatePickBar();
-  if (selectedColor) {
-    const label = selectedColor === 'blue' ? '藍' : selectedColor === 'red' ? '紅' : '白';
-    statusText.textContent = `已選擇「${label}」，請點一張牌翻開`;
+  if (p.selectedColor) {
+    const label = p.selectedColor === 'blue' ? '藍' : p.selectedColor === 'red' ? '紅' : '白';
+    statusText.textContent = `【${genderLabel[activeGender]}】已選擇「${label}」，請點一張牌翻開`;
   } else {
-    statusText.textContent = '請先選擇要抽出的顏色';
+    statusText.textContent = `【${genderLabel[activeGender]}】請先選擇要抽出的顏色`;
   }
 }
 
@@ -309,128 +332,150 @@ Object.keys(pickBtns).forEach(color => {
   pickBtns[color].addEventListener('click', () => selectColor(color));
 });
 
-function makeCards(count) {
+function renderCards() {
+  const p = pool();
   cardArea.innerHTML = '';
-  cards = [];
-  cardCounter = 0;
+  p.cards.forEach((c, idx) => {
+    const el = document.createElement('div');
+    el.className = 'card';
+    if (c.flipped) {
+      el.classList.add('flipped', c.color, 'disabled');
+      el.textContent = c.color === 'blue' ? '藍' : c.color === 'red' ? '紅' : '白';
+    } else {
+      el.innerHTML = `抽<br>${idx + 1}`;
+      el.addEventListener('click', () => onCardClick(idx));
+    }
+    cardArea.appendChild(el);
+  });
+}
+
+function makeCards(count) {
+  const p = pool();
+  p.cards = [];
+  p.cardCounter = 0;
   for (let i = 0; i < count; i++) {
-    addCard();
+    p.cardCounter++;
+    p.cards.push({ flipped: false, color: null });
   }
+  renderCards();
 }
 
-function addCard() {
-  cardCounter++;
-  const el = document.createElement('div');
-  el.className = 'card';
-  el.innerHTML = `抽<br>${cardCounter}`;
-  const idx = cards.length;
-  el.addEventListener('click', () => onCardClick(idx));
-  cardArea.appendChild(el);
-  cards.push({ el, flipped: false, color: null });
-}
-
-function pickRandomColor() {
+function pickRandomColor(p) {
   // 依剩餘張數加權隨機，避免張數多的顏色跟張數少的顏色被抽到的機率一樣，
   // 導致某顏色早早抽完、另一顏色卻一直留到最後才出現。
   const colors = ['blue','red','white'];
-  const total = colors.reduce((sum, c) => sum + Math.max(0, remainingInRound[c]), 0);
+  const total = colors.reduce((sum, c) => sum + Math.max(0, p.remainingInRound[c]), 0);
   if (total <= 0) return null;
   let r = Math.random() * total;
   for (const c of colors) {
-    const w = Math.max(0, remainingInRound[c]);
+    const w = Math.max(0, p.remainingInRound[c]);
     if (r < w) return c;
     r -= w;
   }
-  return colors.find(c => remainingInRound[c] > 0);
+  return colors.find(c => p.remainingInRound[c] > 0);
 }
 
 function onCardClick(idx) {
-  const c = cards[idx];
+  const p = pool();
+  const c = p.cards[idx];
   if (c.flipped) return;
-  const color = selectedColor || pickRandomColor();
+  const color = p.selectedColor || pickRandomColor(p);
   c.flipped = true;
   c.color = color;
-  c.el.classList.add('flipped', color, 'disabled');
-  c.el.textContent = color === 'blue' ? '藍' : color === 'red' ? '紅' : '白';
 
-  remainingInRound[color]--;
-  teamCounts[color]++;
+  p.remainingInRound[color]--;
+  p.teamCounts[color]++;
   updateTeamHeaders();
+  renderCards();
 
   const li = document.createElement('li');
-  li.textContent = `第 ${idx + 1} 張牌`;
+  li.textContent = `${genderLabel[activeGender]}－第 ${idx + 1} 張牌`;
   teamLists[color].appendChild(li);
 
-  selectedColor = null;
+  p.selectedColor = null;
   updatePickBar();
 
   const label = color === 'blue' ? '藍' : color === 'red' ? '紅' : '白';
-  const roundDone = remainingInRound.blue <= 0 && remainingInRound.red <= 0 && remainingInRound.white <= 0;
+  const roundDone = p.remainingInRound.blue <= 0 && p.remainingInRound.red <= 0 && p.remainingInRound.white <= 0;
+  const prefix = `【${genderLabel[activeGender]}】`;
   if (roundDone) {
-    if (round === 1) {
-      statusText.textContent = `這輪最後一張是「${label}」！確認後按「下一輪抽籤」繼續`;
-      btnNextRound.classList.remove('hidden');
+    statusText.textContent = `${prefix}這輪最後一張是「${label}」！這批抽籤完成`;
+  } else {
+    statusText.textContent = `${prefix}請選擇顏色，或直接翻牌隨機抽色`;
+  }
+}
+
+function startRound1(gender) {
+  const p = pools[gender];
+  let b, r, w;
+  if (gender === 'male') {
+    b = Math.max(0, Math.min(6, setupValues.blue));
+    r = Math.max(0, Math.min(6, setupValues.red));
+    w = Math.max(0, Math.min(6, setupValues.white));
+  } else {
+    b = 6 - Math.max(0, Math.min(6, setupValues.blue));
+    r = 6 - Math.max(0, Math.min(6, setupValues.red));
+    w = 6 - Math.max(0, Math.min(6, setupValues.white));
+  }
+  p.remainingInRound = { blue:b, red:r, white:w };
+  p.teamCounts = { blue:0, red:0, white:0 };
+  p.round = 1;
+  p.started = true;
+  const total = b + r + w;
+  const wasActive = activeGender === gender;
+  if (wasActive) makeCards(total); else { p.cards = []; for (let i=0;i<total;i++) p.cards.push({flipped:false,color:null}); }
+  p.selectedColor = null;
+  if (wasActive) {
+    updatePickBar();
+    if (total === 0) {
+      statusText.textContent = `【${genderLabel[gender]}】沒有牌可抽`;
     } else {
-      statusText.textContent = `這輪最後一張是「${label}」！全部抽籤完成，三隊各 6 人`;
+      statusText.textContent = `【${genderLabel[gender]}】可選顏色指定翻牌，或直接翻牌隨機抽色，共 ${total} 張`;
     }
-  } else {
-    statusText.textContent = '請選擇顏色，或直接翻牌隨機抽色';
   }
 }
 
-btnNextRound.addEventListener('click', () => {
-  btnNextRound.classList.add('hidden');
-  startRound2();
-});
-
-function startRound1() {
-  const b = Math.max(0, Math.min(6, parseInt(setBlue.value) || 0));
-  const r = Math.max(0, Math.min(6, parseInt(setRed.value) || 0));
-  const w = Math.max(0, Math.min(6, parseInt(setWhite.value) || 0));
-  remainingInRound = { blue:b, red:r, white:w };
-  teamCounts.blue = teamCounts.red = teamCounts.white = 0;
-  listBlue.innerHTML = listRed.innerHTML = listWhite.innerHTML = '';
-  updateTeamHeaders();
-  round = 1;
-  const total = b + r + w;
-  makeCards(total);
-  selectedColor = null;
+function switchGender(g) {
+  activeGender = g;
+  document.getElementById('tabMale').classList.toggle('active', g === 'male');
+  document.getElementById('tabFemale').classList.toggle('active', g === 'female');
+  const p = pool();
+  renderCards();
   updatePickBar();
-  if (total === 0) {
-    statusText.textContent = '第一次抽籤數量都是 0，直接進入第二次抽籤';
-    startRound2();
+  const prefix = `【${genderLabel[g]}】`;
+  if (!p.started) {
+    statusText.textContent = `${prefix}尚未開始抽籤`;
   } else {
-    statusText.textContent = `第一次抽籤：可選顏色指定翻牌，或直接翻牌隨機抽色，共 ${total} 張`;
+    const total = p.remainingInRound.blue + p.remainingInRound.red + p.remainingInRound.white;
+    if (total === 0) {
+      statusText.textContent = `${prefix}抽籤完成！`;
+    } else {
+      statusText.textContent = `${prefix}可選顏色指定翻牌，或直接翻牌隨機抽色，剩 ${total} 張`;
+    }
   }
 }
 
-function startRound2() {
-  round = 2;
-  const b = 6 - teamCounts.blue;
-  const r = 6 - teamCounts.red;
-  const w = 6 - teamCounts.white;
-  remainingInRound = { blue:b, red:r, white:w };
-  const total = b + r + w;
-  makeCards(total);
-  selectedColor = null;
-  updatePickBar();
-  if (total === 0) {
-    statusText.textContent = '全部抽籤完成！三隊各 6 人';
-  } else {
-    statusText.textContent = `第二次抽籤：只剩 ${total} 張牌要抽，可指定顏色或直接翻牌隨機抽色`;
-  }
-}
+document.getElementById('tabMale').addEventListener('click', () => switchGender('male'));
+document.getElementById('tabFemale').addEventListener('click', () => switchGender('female'));
 
 btnStart.addEventListener('click', () => {
   setupBox.classList.add('hidden');
   gameArea.classList.remove('hidden');
-  startRound1();
+  pools.male = newPool();
+  pools.female = newPool();
+  listBlue.innerHTML = listRed.innerHTML = listWhite.innerHTML = '';
+  updateTeamHeaders();
+  activeGender = 'male';
+  document.getElementById('tabMale').classList.add('active');
+  document.getElementById('tabFemale').classList.remove('active');
+  startRound1('male');
+  startRound1('female');
+  switchGender('male');
 });
 
 btnReset.addEventListener('click', () => {
   gameArea.classList.add('hidden');
   setupBox.classList.remove('hidden');
-  btnNextRound.classList.add('hidden');
 });
 
 // ---------- 頁面切換 ----------
